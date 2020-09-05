@@ -38,7 +38,7 @@ classifier.add(Flatten())
 
 #Etape 4 - Couche complète connectée
 classifier.add(Dense(units=128,activation="relu"))
-classifier.add(Dense(units=1,activation="sigmoid"))
+classifier.add(Dense(units=10,activation="sigmoid"))
 
 #Compilation
 classifier.compile(optimizer="adam", loss="binary_crossentropy",
@@ -63,15 +63,6 @@ train_generator = np.append(np.append(train_generator,train_generator,axis = 3),
 
 labels = idx2numpy.convert_from_file("train-labels-idx1-ubyte")
 
-toto = np.array([[1,2],[3,4]])
-titi = np.array([toto,np.array([5,6,7])])
-
-validation_generator = idx2numpy.convert_from_file("t10k-images-idx3-ubyte")
-validation_generator = np.expand_dims(validation_generator, axis=3)
-validation_generator = np.append(np.append(validation_generator,validation_generator,axis = 3),validation_generator,axis = 3)
-
-validation_generator = (validation_generator,idx2numpy.convert_from_file("t10k-labels-idx1-ubyte"))
-
 
 # train_generator = train_datagen.flow_from_directory(
 #         'dataset/training_set',
@@ -85,27 +76,68 @@ validation_generator = (validation_generator,idx2numpy.convert_from_file("t10k-l
 #         batch_size=32,
 #         class_mode='binary')
 
+#Création des labels
+labelsBruts = idx2numpy.convert_from_file("train-labels-idx1-ubyte")
+labels = np.zeros((len(train_generator),10))
+
+for i in range(0,len(train_generator)):
+        labels[i][labelsBruts[i]] = 1
+labels = labels.astype(int)
+
+validation_generator = idx2numpy.convert_from_file("t10k-images-idx3-ubyte")
+validation_generator = np.expand_dims(validation_generator, axis=3)
+validation_generator = np.append(np.append(validation_generator,validation_generator,axis = 3),validation_generator,axis = 3)
+
+labelsBrutsValidation = idx2numpy.convert_from_file("t10k-labels-idx1-ubyte")
+labelsValidation = np.zeros((len(validation_generator),10))
+
+for i in range(0,len(validation_generator)):
+        labelsValidation[i][labelsBrutsValidation[i]] = 1
+labelsValidation = labelsValidation.astype(int)
+
+
+validation_generator = (validation_generator,labelsValidation)
+
+
+
+
 classifier.fit(
-        x=train_generator,y = idx2numpy.convert_from_file("train-labels-idx1-ubyte"),
+        x=train_generator,y = labels,
         #steps_per_epoch=250,
-        epochs=10,
+        epochs=1,
         validation_data=validation_generator,
         batch_size=32)
 
-test1 = validation_generator[0][0]
-soluce = classifier.predict(validation_generator[0])
+#Vérification
+res = np.zeros((len(validation_generator[0]),3))
+correct = 0
+pred = classifier.predict(validation_generator[0])
+for i in range(0,len(validation_generator[0])):
+    res[i][0] = labelsBrutsValidation[i]
+    argMax = -1
+    maxi = -1
+    for j in range(0,10):
+        if pred[i][j] > maxi:
+            maxi = pred[i][j]
+            argMax = j
+    res[i][1] = argMax
+    if res[i][0] == res[i][1]:
+        res[i][2] = 1
+        correct += 1
+correct /= len(validation_generator[0])
+        
 
-from keras.preprocessing.image import load_img
-from keras.preprocessing.image import img_to_array
+# from keras.preprocessing.image import load_img
+# from keras.preprocessing.image import img_to_array
 
-for i in range(1,100):
-    image = load_img("dataset/training_set/cats/cat."+str(i)+".jpg",target_size=(128,128))
-    input_arr = img_to_array(image)
-    input_arr = np.array([input_arr])  # Convert single image to a batch.
-    if classifier.predict(input_arr)[0][0] == 0 :
-        print("dichat")
-    else :
-        print("didou")
+# for i in range(1,100):
+#     image = load_img("dataset/training_set/cats/cat."+str(i)+".jpg",target_size=(128,128))
+#     input_arr = img_to_array(image)
+#     input_arr = np.array([input_arr])  # Convert single image to a batch.
+#     if classifier.predict(input_arr)[0][0] == 0 :
+#         print("dichat")
+#     else :
+#         print("didou")
 
 
 
